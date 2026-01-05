@@ -267,7 +267,7 @@ function parseTransaction(text: string): {
 }
 
 // ============================================================================
-// 🖥️ COMPONENTE VISUAL
+// 🖥️ COMPONENTE VISUAL (OTIMIZADO MOBILE)
 // ============================================================================
 export default function ChatIA() {
   const { user } = useAuth();
@@ -331,7 +331,7 @@ export default function ChatIA() {
                    `📝 **Descrição:** ${parsed.description}\n` +
                    `📂 **Categoria:** ${CATEGORY_LABELS[parsed.category]}`;
       } else {
-        response = '🤔 Compreendi sua intenção, mas preciso de um valor numérico claro para processar o lançamento.Poderia repetir informando o valor?';
+        response = '🤔 Compreendi sua intenção, mas preciso de um valor numérico claro para processar o lançamento. Poderia repetir informando o valor?';
       }
     }
 
@@ -340,25 +340,25 @@ export default function ChatIA() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col">
-      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-6 flex items-center gap-3">
-        <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center neon-border">
-          <Sparkles className="w-6 h-6 text-primary" />
+    <div className="h-[calc(100dvh-10rem)] md:h-[calc(100vh-8rem)] flex flex-col px-1">
+      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4 md:mb-6 flex items-center gap-3">
+        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/20 flex items-center justify-center neon-border">
+          <Sparkles className="w-5 h-5 md:w-6 h-6 text-primary" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold">Consultor Estratégico</h1>
-          <p className="text-muted-foreground">Inteligência de dados para sua saúde financeira</p>
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-bold truncate">Consultor Estratégico</h1>
+          <p className="text-[10px] md:text-sm text-muted-foreground uppercase font-bold tracking-widest">IA Inteligente</p>
         </div>
       </motion.div>
 
       <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex-1 glass-card flex flex-col overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 scroll-smooth">
           <AnimatePresence>
             {messages.map((m) => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {m.role === 'assistant' && <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0"><Bot className="w-4 h-4 text-primary" /></div>}
-                <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${m.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-secondary'}`}>
-                  <p className="text-sm leading-relaxed whitespace-pre-line">{m.content}</p>
+                {m.role === 'assistant' && <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 border border-primary/20"><Bot className="w-4 h-4 text-primary" /></div>}
+                <div className={`max-w-[90%] md:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-secondary rounded-bl-sm border border-white/5'}`}>
+                  <p className="whitespace-pre-line">{m.content}</p>
                 </div>
               </motion.div>
             ))}
@@ -367,22 +367,28 @@ export default function ChatIA() {
         </div>
 
         {user?.plan !== 'pro' && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 text-center">
-             <div className="text-center"><Lock className="mx-auto mb-2"/><Button onClick={() => navigate('/assinatura')}>Assinar PRO</Button></div>
+          <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-10 p-6">
+             <div className="text-center bg-secondary/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
+                <Lock className="mx-auto mb-4 w-10 h-10 text-primary opacity-50"/>
+                <h3 className="text-lg font-bold mb-4">Acesso PRO Necessário</h3>
+                <Button onClick={() => navigate('/assinatura')} className="w-full py-6 font-bold">Assinar Agora</Button>
+             </div>
           </div>
         )}
 
-        <div className="p-4 border-t border-border/50 flex gap-3">
+        <div className="p-3 md:p-4 border-t border-border/50 flex gap-2 md:gap-3 bg-black/20">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ex: Vou receber 960 de freelance em Fevereiro..."
+            placeholder="Gastei 50 no uber..."
             disabled={user?.plan !== 'pro'}
-            className="flex-1 bg-secondary/50 border border-border/50 rounded-xl px-4 py-3 text-sm focus:outline-none"
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm focus:border-primary outline-none transition-all placeholder:text-gray-600"
           />
-          <Button onClick={handleSend} disabled={!input.trim()} className="bg-primary rounded-xl px-4"><Send className="w-5 h-5" /></Button>
+          <Button onClick={handleSend} disabled={!input.trim()} className="bg-primary hover:bg-primary/90 rounded-xl px-4 h-[48px] shadow-lg shadow-primary/20">
+            <Send className="w-5 h-5" />
+          </Button>
         </div>
       </motion.div>
     </div>

@@ -1,22 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Check, 
-  Sparkles, 
-  Zap, 
-  Shield, 
-  MessageSquare,
-  TrendingUp,
-  X,
-  Diamond,
-  BarChart3,
-  Lock,
-  Rocket,
-  AlertTriangle,
-  Trash2,
-  CreditCard,
-  RefreshCw,
-  Calendar
+  Check, Sparkles, Zap, Shield, MessageSquare, TrendingUp, X,
+  Diamond, BarChart3, Lock, Rocket, AlertTriangle, Trash2,
+  CreditCard, Calendar
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useData } from '@/contexts/DataContext';
@@ -27,6 +14,11 @@ import { ChangeCardModal } from '@/components/ChangeCardModal';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+
+// ✅ Função adicionada para resolver o erro 'Cannot find name formatCurrency'
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
 
 const freePlanFeatures = [
   { text: 'Acesso ao Dashboard Básico', included: true },
@@ -42,26 +34,8 @@ const proPlanFeatures = [
   { text: 'Suporte Prioritário', icon: Lock },
 ];
 
-const whyProFeatures = [
-  {
-    icon: MessageSquare,
-    title: 'IA Avançada',
-    description: 'Registre gastos conversando naturalmente com nossa IA',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Análises Profundas',
-    description: 'Insights personalizados para economizar mais',
-  },
-  {
-    icon: Shield,
-    title: 'Dados Seguros',
-    description: 'Criptografia de ponta a ponta para seus dados',
-  },
-];
-
 export default function Assinatura() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const { resetAccount } = useData();
   const { toast } = useToast();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -70,359 +44,114 @@ export default function Assinatura() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isAnnual, setIsAnnual] = useState(false);
 
+  const isProUser = user?.plan === 'pro'; 
+
   const monthlyPrice = 29.90;
-  const annualPrice = monthlyPrice * 12 * 0.8; // 20% off
+  const annualPrice = monthlyPrice * 12 * 0.8; 
   const monthlyFromAnnual = annualPrice / 12;
 
   const handleCheckoutSuccess = () => {
-    toast({
-      title: "🎉 Parabéns!",
-      description: "Você agora é um membro PRO! Aproveite todos os recursos.",
-    });
-  };
-
-  const handleCancelSubscription = () => {
-    updateUser({ isPro: false });
-    toast({
-      title: "Assinatura cancelada",
-      description: "Você voltou para o plano gratuito.",
-    });
+    toast({ title: "🎉 Parabéns!", description: "Você agora é um membro PRO!" });
   };
 
   const handleResetAccount = () => {
     resetAccount();
     setShowResetConfirm(false);
-    toast({
-      title: "Conta resetada",
-      description: "Todas as transações foram removidas.",
-    });
-  };
-
-  const handleChangeToAnnual = () => {
-    toast({
-      title: "Plano alterado!",
-      description: "Você agora está no plano anual com 20% de desconto.",
-    });
+    toast({ title: "Conta resetada", description: "Dados removidos com sucesso." });
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        className="text-center"
-      >
-        <h1 className="text-3xl font-bold mb-2">Escolha seu Plano</h1>
-        <p className="text-muted-foreground">
-          Desbloqueie todo o potencial do FinChat
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6 md:space-y-10 pb-24 md:pb-10 px-2 md:px-0">
+      <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center px-4">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Escolha seu Plano</h1>
+        <p className="text-sm text-muted-foreground">Desbloqueie todo o potencial do FinChat</p>
       </motion.div>
 
-      {/* Billing Toggle */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.4 }}
-        className="flex items-center justify-center gap-4"
-      >
-        <Label htmlFor="billing-toggle" className={`text-sm ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
-          Mensal
-        </Label>
-        <Switch
-          id="billing-toggle"
-          checked={isAnnual}
-          onCheckedChange={setIsAnnual}
-        />
+      <div className="flex items-center justify-center gap-4 py-2">
+        <Label className={`text-sm ${!isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>Mensal</Label>
+        <Switch checked={isAnnual} onCheckedChange={setIsAnnual} />
         <div className="flex items-center gap-2">
-          <Label htmlFor="billing-toggle" className={`text-sm ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>
-            Anual
-          </Label>
-          {isAnnual && (
-            <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-xs font-medium">
-              -20%
-            </span>
-          )}
+          <Label className={`text-sm ${isAnnual ? 'text-foreground' : 'text-muted-foreground'}`}>Anual</Label>
+          {isAnnual && <span className="px-2 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-bold">-20%</span>}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Current Plan Badge */}
-      {user?.isPro && (
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="flex justify-center"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/20 border border-accent/30">
-            <Sparkles className="w-4 h-4 text-accent" />
-            <span className="text-sm font-medium text-accent">Você é PRO!</span>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Free Plan */}
-        <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className={`glass-card p-8 ${!user?.isPro ? 'ring-2 ring-primary/30' : ''}`}
-        >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className={`glass-card p-6 md:p-8 flex flex-col ${!isProUser ? 'ring-2 ring-primary/30 border-primary/20' : 'opacity-80'}`}>
           <div className="mb-6">
-            <h3 className="text-xl font-bold mb-1">Gratuito</h3>
-            <p className="text-muted-foreground text-sm">Para começar a organizar suas finanças</p>
+            <h3 className="text-xl font-bold">Gratuito</h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Essencial</p>
           </div>
-
-          <div className="mb-6">
-            <span className="text-4xl font-bold">R$ 0</span>
-            <span className="text-muted-foreground">,00</span>
-          </div>
-
-          <ul className="space-y-3 mb-8">
-            {freePlanFeatures.map((feature, index) => (
-              <li key={index} className="flex items-center gap-3 text-sm">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                  feature.included 
-                    ? 'bg-success/20 text-success' 
-                    : 'bg-muted text-muted-foreground'
-                }`}>
-                  {feature.included ? (
-                    <Check className="w-3 h-3" />
-                  ) : (
-                    <X className="w-3 h-3" />
-                  )}
+          <div className="mb-6"><span className="text-4xl font-bold">R$ 0</span><span className="text-muted-foreground">,00</span></div>
+          <ul className="space-y-4 mb-8 flex-1">
+            {freePlanFeatures.map((f, i) => (
+              <li key={i} className="flex items-center gap-3 text-sm">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${f.included ? 'bg-success/20 text-success' : 'bg-white/5 text-gray-600'}`}>
+                  {f.included ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
                 </div>
-                <span className={feature.included ? '' : 'text-muted-foreground line-through'}>
-                  {feature.text}
-                </span>
+                <span className={f.included ? '' : 'text-gray-600 line-through'}>{f.text}</span>
               </li>
             ))}
           </ul>
+          <Button variant="outline" className="w-full py-6 font-bold" disabled>Plano Atual</Button>
+        </div>
 
-          <Button 
-            variant="outline" 
-            className="w-full" 
-            disabled
-          >
-            {!user?.isPro ? 'Plano Atual' : 'Plano Básico'}
+        <div className={`glass-card p-6 md:p-8 relative overflow-hidden border-2 flex flex-col ${isProUser ? 'border-primary/50' : 'border-primary/20'}`}>
+          <div className="absolute top-4 right-4"><span className="px-3 py-1 rounded-full bg-primary/20 text-primary text-[10px] font-bold border border-primary/30 uppercase">Popular</span></div>
+          <div className="mb-6">
+            <h3 className="text-xl font-bold flex items-center gap-2">PRO <Sparkles className="w-4 h-4 text-primary" /></h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Completo</p>
+          </div>
+          <div className="mb-6">
+            <span className="text-4xl font-bold">R$ {isAnnual ? monthlyFromAnnual.toFixed(2).replace('.', ',') : '29,90'}</span>
+            <span className="text-muted-foreground">/mês</span>
+            {isAnnual && <p className="text-[10px] text-primary font-bold mt-1">Cobrado {formatCurrency(annualPrice)}/ano</p>}
+          </div>
+          <ul className="space-y-4 mb-8 flex-1">
+            {proPlanFeatures.map((f, i) => (
+              <li key={i} className="flex items-center gap-3 text-sm">
+                <div className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0"><f.icon className="w-3 h-3" /></div>
+                <span className="font-medium text-white">{f.text}</span>
+              </li>
+            ))}
+          </ul>
+          <Button onClick={() => !isProUser && setIsCheckoutOpen(true)} className={`w-full py-6 text-lg font-black ${isProUser ? 'bg-secondary text-gray-400' : 'bg-primary text-primary-foreground shadow-xl shadow-primary/20'}`} disabled={isProUser}>
+            {isProUser ? 'Ativo' : 'ASSINAR AGORA'}
           </Button>
-        </motion.div>
-
-        {/* Pro Plan */}
-        <motion.div
-          initial={{ x: 20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
-          className={`glass-card p-8 relative overflow-hidden border-2 ${
-            user?.isPro ? 'border-accent/50' : 'border-accent/30'
-          }`}
-          style={{
-            boxShadow: user?.isPro ? '0 0 60px hsl(160 84% 39% / 0.2)' : '0 0 40px hsl(160 84% 39% / 0.1)',
-          }}
-        >
-          {/* Popular Badge */}
-          <div className="absolute top-4 right-4">
-            <span className="px-3 py-1 rounded-full bg-accent/20 text-accent text-xs font-medium border border-accent/30">
-              Mais Popular
-            </span>
-          </div>
-
-          {/* Glow Effect */}
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent/20 rounded-full blur-3xl" />
-
-          <div className="relative">
-            <div className="mb-6">
-              <div className="flex items-center gap-2">
-                <h3 className="text-xl font-bold">PRO</h3>
-                <Sparkles className="w-5 h-5 text-accent" />
-              </div>
-              <p className="text-muted-foreground text-sm">Para quem quer controle total</p>
-            </div>
-
-            <div className="mb-6">
-              {isAnnual ? (
-                <>
-                  <span className="text-4xl font-bold">R$ {monthlyFromAnnual.toFixed(2).replace('.', ',')}</span>
-                  <span className="text-muted-foreground">/mês</span>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Cobrado R$ {annualPrice.toFixed(2).replace('.', ',')} anualmente
-                  </p>
-                </>
-              ) : (
-                <>
-                  <span className="text-4xl font-bold">R$ 29</span>
-                  <span className="text-muted-foreground">,90</span>
-                  <span className="text-muted-foreground">/mês</span>
-                </>
-              )}
-            </div>
-
-            <ul className="space-y-3 mb-8">
-              {proPlanFeatures.map((feature, index) => (
-                <li key={index} className="flex items-center gap-3 text-sm">
-                  <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center">
-                    <feature.icon className="w-3 h-3 text-accent" />
-                  </div>
-                  <span className="font-medium">{feature.text}</span>
-                </li>
-              ))}
-            </ul>
-
-            {user?.isPro ? (
-              <Button 
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" 
-                disabled
-                style={{
-                  boxShadow: '0 0 20px hsl(160 84% 39% / 0.3)',
-                }}
-              >
-                <Check className="w-4 h-4 mr-2" />
-                Plano Atual
-              </Button>
-            ) : (
-              <Button 
-                onClick={() => setIsCheckoutOpen(true)}
-                className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
-                style={{
-                  boxShadow: '0 0 30px hsl(160 84% 39% / 0.4)',
-                }}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Assinar Agora
-              </Button>
-            )}
-          </div>
-        </motion.div>
+        </div>
       </div>
 
-      {/* PRO User Management Panel */}
-      {user?.isPro && (
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.35, duration: 0.4 }}
-          className="glass-card p-6"
-        >
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-accent" />
-            Gerenciar Assinatura
-          </h3>
-          
-          <div className="grid md:grid-cols-3 gap-4">
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => setIsChangeCardOpen(true)}
-            >
-              <CreditCard className="w-4 h-4" />
-              Alterar Cartão
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={handleChangeToAnnual}
-            >
-              <Calendar className="w-4 h-4" />
-              Mudar para Anual
-            </Button>
-
-            <Button 
-              variant="ghost" 
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-              onClick={() => setIsCancelModalOpen(true)}
-            >
-              Cancelar Assinatura
-            </Button>
+      {isProUser && (
+        <div className="glass-card p-6 border border-primary/10">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" /> Gestão</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Button variant="outline" className="py-5" onClick={() => setIsChangeCardOpen(true)}>Trocar Cartão</Button>
+            <Button variant="ghost" className="py-5 text-destructive hover:bg-destructive/10" onClick={() => setIsCancelModalOpen(true)}>Cancelar</Button>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Features Section */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.4 }}
-        className="glass-card p-8"
-      >
-        <h3 className="text-xl font-bold mb-6 text-center">Por que escolher o PRO?</h3>
-        
-        <div className="grid md:grid-cols-3 gap-6">
-          {whyProFeatures.map((feature, index) => (
-            <div key={index} className="text-center">
-              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center mx-auto mb-4">
-                <feature.icon className="w-6 h-6 text-accent" />
-              </div>
-              <h4 className="font-semibold mb-2">{feature.title}</h4>
-              <p className="text-sm text-muted-foreground">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Reset Account Section */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
-        className="glass-card p-6 border-destructive/30"
-      >
-        <div className="flex items-center justify-between">
+      {/* ✅ Zona de Perigo Otimizada para Mobile */}
+      <div className="glass-card p-6 border border-destructive/20 bg-destructive/5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <h4 className="font-semibold">Zona de Perigo</h4>
-              <p className="text-sm text-muted-foreground">Resetar todos os dados da conta</p>
-            </div>
+            <div className="w-12 h-12 rounded-2xl bg-destructive/20 flex items-center justify-center shrink-0"><AlertTriangle className="w-6 h-6 text-destructive" /></div>
+            <div><h4 className="font-bold text-white">Resetar Conta</h4><p className="text-xs text-gray-500">Iso apagará permanentemente todos os seus dados financeiros.</p></div>
           </div>
           {!showResetConfirm ? (
-            <Button 
-              variant="outline" 
-              className="border-destructive/50 text-destructive hover:bg-destructive/10"
-              onClick={() => setShowResetConfirm(true)}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Resetar Conta
-            </Button>
+            <Button variant="outline" className="w-full md:w-auto border-destructive/50 text-destructive hover:bg-destructive/10 py-6 px-8" onClick={() => setShowResetConfirm(true)}>Resetar Agora</Button>
           ) : (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowResetConfirm(false)}>
-                Cancelar
-              </Button>
-              <Button variant="destructive" onClick={handleResetAccount}>
-                Confirmar Reset
-              </Button>
+            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+              <Button variant="ghost" className="w-full sm:flex-1 py-6" onClick={() => setShowResetConfirm(false)}>Cancelar</Button>
+              <Button variant="destructive" className="w-full sm:flex-1 py-6 font-bold" onClick={handleResetAccount}>Confirmar Reset</Button>
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
-      {/* Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        onSuccess={handleCheckoutSuccess}
-        isAnnual={isAnnual}
-      />
-
-      {/* Cancel Subscription Modal */}
-      <CancelSubscriptionModal
-        isOpen={isCancelModalOpen}
-        onClose={() => setIsCancelModalOpen(false)}
-        onCancel={handleCancelSubscription}
-      />
-
-      {/* Change Card Modal */}
-      <ChangeCardModal
-        isOpen={isChangeCardOpen}
-        onClose={() => setIsChangeCardOpen(false)}
-      />
+      <CheckoutModal isOpen={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} onSuccess={handleCheckoutSuccess} isAnnual={isAnnual} />
+      <CancelSubscriptionModal isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} onCancel={() => toast({title: "Cancelado"})} />
+      <ChangeCardModal isOpen={isChangeCardOpen} onClose={() => setIsChangeCardOpen(false)} />
     </div>
   );
 }
