@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Calendar, Tag, Wallet, CreditCard } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Save, Wallet, CreditCard } from 'lucide-react';
 import { Transaction, TransactionCategory, BankType, PaymentMethod, CATEGORY_LABELS } from '@/contexts/DataContext';
 import { Button } from '@/components/ui/button';
 
 interface EditTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  transaction?: Transaction | null; // Agora aceita nulo para novos lançamentos
+  transaction?: Transaction | null;
   onSave: (id: string, updates: Partial<Transaction>) => Promise<void>;
 }
 
 export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: EditTransactionModalProps) {
-  // Inicializa os estados: se houver transação, usa os dados dela; se não, inicia vazio (Autonomia)
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<TransactionCategory>('outros');
@@ -21,7 +20,6 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('debit');
   const [date, setDate] = useState('');
 
-  // Sincroniza os campos quando o modal abre (seja para editar ou para novo)
   useEffect(() => {
     if (transaction) {
       setDescription(transaction.description);
@@ -32,7 +30,6 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
       setPaymentMethod(transaction.paymentMethod || 'debit');
       setDate(new Date(transaction.date).toISOString().split('T')[0]);
     } else {
-      // Limpa os campos para um NOVO lançamento
       setDescription('');
       setAmount('');
       setCategory('outros');
@@ -49,10 +46,10 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
       description,
       amount: parseFloat(amount),
       category,
-      bank,
+      bank, // ✅ Garante que o banco selecionado seja enviado
       type,
       paymentMethod,
-      date: new Date(date + 'T12:00:00') // Garante que a data não mude por fuso horário
+      date: new Date(date + 'T12:00:00')
     };
     await onSave(transaction?.id || '', updates);
     onClose();
@@ -69,38 +66,37 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Seletor de Tipo (Receita/Despesa) */}
           <div className="flex gap-2 p-1 bg-secondary/30 rounded-xl">
-            <button type="button" onClick={() => setType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'expense' ? 'bg-destructive text-white shadow-lg' : 'text-gray-400'}`}>SAÍDA</button>
-            <button type="button" onClick={() => setType('income')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'income' ? 'bg-success text-white shadow-lg' : 'text-gray-400'}`}>ENTRADA</button>
+            <button type="button" onClick={() => setType('expense')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'expense' ? 'bg-destructive text-white' : 'text-gray-400'}`}>SAÍDA</button>
+            <button type="button" onClick={() => setType('income')} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${type === 'income' ? 'bg-success text-white' : 'text-gray-400'}`}>ENTRADA</button>
           </div>
 
           <div>
             <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Descrição</label>
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" required placeholder="Ex: Mercado mensal" />
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white" required />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Valor (R$)</label>
-              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none" required />
+              <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white" required />
             </div>
             <div>
               <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Data</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none" required />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white" required />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Categoria</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value as TransactionCategory)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none">
+              <select value={category} onChange={(e) => setCategory(e.target.value as TransactionCategory)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white">
                 {Object.entries(CATEGORY_LABELS).map(([val, label]) => <option key={val} value={val}>{label}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Banco</label>
-              <select value={bank} onChange={(e) => setBank(e.target.value as BankType)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white focus:outline-none uppercase">
+              <select value={bank} onChange={(e) => setBank(e.target.value as BankType)} className="w-full bg-secondary/50 border border-white/5 rounded-xl px-4 py-3 text-white uppercase">
                 <option value="itau">Itaú</option>
                 <option value="nubank">Nubank</option>
                 <option value="caixa">Caixa</option>
@@ -109,13 +105,12 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
             </div>
           </div>
 
-          {/* Método de Pagamento (Só aparece se for Despesa) */}
           {type === 'expense' && (
             <div>
               <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Método de Pagamento</label>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setPaymentMethod('debit')} className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 transition-all ${paymentMethod === 'debit' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 bg-secondary/30 text-gray-400'}`}><Wallet className="w-4 h-4"/> Débito</button>
-                <button type="button" onClick={() => setPaymentMethod('credit')} className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 transition-all ${paymentMethod === 'credit' ? 'border-orange-500 bg-orange-500/10 text-orange-400' : 'border-white/5 bg-secondary/30 text-gray-400'}`}><CreditCard className="w-4 h-4"/> Crédito</button>
+                <button type="button" onClick={() => setPaymentMethod('debit')} className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 ${paymentMethod === 'debit' ? 'border-primary bg-primary/10 text-primary' : 'border-white/5 text-gray-400'}`}><Wallet className="w-4 h-4"/> Débito</button>
+                <button type="button" onClick={() => setPaymentMethod('credit')} className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 ${paymentMethod === 'credit' ? 'border-orange-500 bg-orange-500/10 text-orange-400' : 'border-white/5 text-gray-400'}`}><CreditCard className="w-4 h-4"/> Crédito</button>
               </div>
             </div>
           )}
