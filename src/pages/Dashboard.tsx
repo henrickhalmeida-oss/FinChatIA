@@ -1,0 +1,368 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  TrendingUp, ArrowUpRight, ArrowDownRight, Plus,
+  Target, Sparkles, CreditCard, Clock, 
+  Wallet, ArrowUp, ArrowDown, PieChart as PieIcon,
+  Pencil, Save, CheckCircle2, Check, Eye, EyeOff, AlertTriangle, X,
+  Info, MessageSquare, Zap
+} from 'lucide-react';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, PieChart, Pie, Cell 
+} from 'recharts';
+import { useData, CATEGORY_LABELS, TransactionCategory, BankType } from '@/contexts/DataContext';
+import { StatCard } from '@/components/StatCard';
+import { BankCard } from '@/components/BankCard';
+import { BudgetCard } from '@/components/BudgetCard';
+import { MonthSelector } from '@/components/MonthSelector';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { EditTransactionModal } from '@/components/EditTransactionModal';
+import { Button } from '@/components/ui/button';
+
+const COLORS: Record<TransactionCategory, string> = {
+  alimentacao: '#ef4444', transporte: '#8b5cf6', casa: '#3b82f6',
+  lazer: '#10b981', saude: '#f59e0b', educacao: '#06b6d4',
+  salario: '#22c55e', investimento: '#6366f1', outros: '#94a3b8',
+};
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+const formatValue = (value: number, isPrivacyEnabled: boolean) => {
+    if (isPrivacyEnabled) return '•••••••';
+    return formatCurrency(value);
+};
+
+const DEFAULT_LIMITS: Record<string, number> = {
+  alimentacao: 1200, transporte: 600, casa: 2000,
+  lazer: 500, saude: 400, educacao: 300, outros: 500
+};
+
+// --- COMPONENTE DO TUTORIAL DE BOAS-VINDAS ---
+const WelcomeTutorial = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+    if (!isOpen) return null;
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#1a1a1a] border border-primary/30 rounded-3xl p-8 w-full max-w-lg shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5"><Zap className="w-32 h-32 text-primary" /></div>
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">Bem-vindo ao FinChat! <Sparkles className="text-primary w-6 h-6"/></h2>
+                <p className="text-gray-400 mb-8">Vamos turbinar sua gestão financeira em segundos.</p>
+                
+                <div className="space-y-6 mb-10">
+                    <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20"><MessageSquare className="text-primary w-6 h-6"/></div>
+                        <div><h4 className="text-white font-bold">Chat IA Inteligente</h4><p className="text-sm text-gray-400">Diga "Gastei 50 no Uber" ou "Vou receber 1000 de freelance" e deixe a IA trabalhar por você.</p></div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center shrink-0 border border-success/20"><Plus className="text-success w-6 h-6"/></div>
+                        <div><h4 className="text-white font-bold">Lançamento Manual</h4><p className="text-sm text-gray-400">Prefere o modo clássico? Use o botão "Novo Lançamento" para controle total dos campos.</p></div>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20"><EyeOff className="text-amber-500 w-6 h-6"/></div>
+                        <div><h4 className="text-white font-bold">Modo Privacidade</h4><p className="text-sm text-gray-400">Use o ícone do olho no topo para ocultar seus saldos e metas em lugares públicos.</p></div>
+                    </div>
+                </div>
+
+                <Button onClick={onClose} className="w-full py-7 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20">Começar Agora</Button>
+            </motion.div>
+        </div>
+    );
+};
+
+const PaymentModal = ({ isOpen, onClose, onConfirm, billDetails }: { isOpen: boolean, onClose: () => void, onConfirm: () => void, billDetails: { bank: string, amount: number } | null }) => {
+    if (!isOpen || !billDetails) return null;
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-[#1a1a1a] border border-red-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative overflow-hidden">
+                <div className="flex justify-between items-start mb-4">
+                    <div className="p-3 bg-red-500/10 rounded-xl border border-red-500/20"><AlertTriangle className="w-6 h-6 text-red-400" /></div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Liquidação de Fatura</h3>
+                <p className="text-gray-400 text-sm mb-6 leading-relaxed">Confirmar o pagamento da fatura do banco <span className="text-white font-semibold capitalize">{billDetails.bank}</span> no valor de <span className="text-white font-semibold">{formatCurrency(billDetails.amount)}</span>?</p>
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 rounded-xl font-medium text-gray-300 hover:bg-white/5 transition-colors border border-white/5">Cancelar</button>
+                    <button onClick={onConfirm} className="flex-1 py-3 rounded-xl font-bold bg-red-500 hover:bg-red-600 text-white transition-colors">Confirmar</button>
+                </div>
+            </motion.div>
+        </div>
+    );
+};
+
+export default function Dashboard() {
+  const { transactions, getCategoryTotals, getMonthlyStats, addTransaction, isPrivacyEnabled, togglePrivacy } = useData();
+  const { toast } = useToast();
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [isEditingBudgets, setIsEditingBudgets] = useState(false);
+  const [budgetLimits, setBudgetLimits] = useState(DEFAULT_LIMITS);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [billToPay, setBillToPay] = useState<{ bank: string, amount: number } | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  
+  // Estado do Tutorial
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    const savedLimits = localStorage.getItem('userBudgetLimits');
+    if (savedLimits) setBudgetLimits(JSON.parse(savedLimits));
+
+    // Lógica para mostrar tutorial apenas na primeira vez
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    if (!hasSeenTutorial) {
+        setShowTutorial(true);
+    }
+  }, []);
+
+  const closeTutorial = () => {
+      localStorage.setItem('hasSeenTutorial', 'true');
+      setShowTutorial(false);
+  };
+
+  const saveBudgets = () => { localStorage.setItem('userBudgetLimits', JSON.stringify(budgetLimits)); setIsEditingBudgets(false); };
+  const handleBudgetChange = (category: string, value: string) => { const numValue = parseFloat(value); if (!isNaN(numValue)) setBudgetLimits(prev => ({ ...prev, [category]: numValue })); };
+  
+  const monthlyStats = getMonthlyStats(selectedMonth.getMonth(), selectedMonth.getFullYear());
+  const monthTransactions = useMemo(() => {
+    return transactions.filter(t => {
+      const date = new Date(t.date);
+      return date.getMonth() === selectedMonth.getMonth() && 
+             date.getFullYear() === selectedMonth.getFullYear();
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, selectedMonth]);
+
+  const processedBills = useMemo(() => {
+    const bills = monthlyStats.creditCardBills;
+    const result = [];
+    for (const [bank, totalSpent] of Object.entries(bills)) {
+        if (totalSpent <= 0) continue;
+        const paidAmount = monthTransactions
+            .filter(t => t.type === 'expense' && t.description.toLowerCase().includes('pagamento fatura') && t.description.toLowerCase().includes(bank.toLowerCase()))
+            .reduce((sum, t) => sum + t.amount, 0);
+        const remaining = totalSpent - paidAmount;
+        result.push({ bank, totalSpent, paidAmount, remaining: Math.max(0, remaining), isFullyPaid: remaining <= 1 });
+    }
+    return result;
+  }, [monthlyStats.creditCardBills, monthTransactions]);
+
+  const initiatePayment = (bank: string, amount: number) => { setBillToPay({ bank, amount }); setPaymentModalOpen(true); };
+  
+  const confirmPayment = async () => {
+    if (!billToPay) return;
+    const payerBankEntry = Object.entries(monthlyStats.bankBalances).sort(([, a], [, b]) => b - a)[0]; 
+    const payerBank = (payerBankEntry && payerBankEntry[1] > 0) ? payerBankEntry[0] : 'outros';
+    await addTransaction({ description: `Pagamento Fatura ${billToPay.bank}`, amount: billToPay.amount, type: 'expense', category: 'outros', bank: payerBank as BankType, paymentMethod: 'debit', date: new Date() });
+    toast({ title: "Pagamento efetuado!" });
+    setPaymentModalOpen(false);
+  };
+
+  const chartData = useMemo(() => {
+    const days = [];
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayTransactions = transactions.filter(t => {
+        const tDate = new Date(t.date);
+        return tDate.getDate() === day && tDate.getMonth() === month && tDate.getFullYear() === year;
+      });
+      days.push({ 
+        name: day % 5 === 0 || day === 1 ? `${day}` : '', 
+        receitas: dayTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0), 
+        despesas: dayTransactions.filter(t => t.type === 'expense' && t.paymentMethod === 'debit').reduce((sum, t) => sum + t.amount, 0) 
+      });
+    }
+    return days;
+  }, [transactions, selectedMonth]);
+
+  const categoryTotals = getCategoryTotals(selectedMonth.getMonth(), selectedMonth.getFullYear());
+  const categoryData = useMemo(() => {
+    return categoryTotals
+      .filter(item => item.total > 0 && item.category !== 'salario')
+      .map(item => ({ name: CATEGORY_LABELS[item.category], value: item.total, color: COLORS[item.category] }))
+      .sort((a, b) => b.value - a.value);
+  }, [categoryTotals]);
+
+  const budgetStatus = useMemo(() => {
+     return categoryTotals.filter(c => c.category !== 'salario' && c.category !== 'investimento').map(c => ({ 
+        category: c.category, spent: c.total, limit: budgetLimits[c.category] || 500 
+     }));
+  }, [categoryTotals, budgetLimits]);
+
+  const activeBanks = useMemo(() => Object.entries(monthlyStats.bankBalances).filter(([_, bal]) => bal !== 0), [monthlyStats.bankBalances]);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10 pb-10 max-w-7xl mx-auto">
+      
+      <WelcomeTutorial isOpen={showTutorial} onClose={closeTutorial} />
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-1 tracking-tight">Painel Financeiro</h1>
+          <p className="text-gray-400">Resumo consolidado do seu fluxo de caixa.</p>
+        </div>
+        <div className="flex items-center gap-4 bg-secondary/30 p-2 rounded-2xl border border-white/5">
+            <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-primary/20"
+            >
+                <Plus className="w-5 h-5" />
+                Novo Lançamento
+            </button>
+            <div className="w-px h-8 bg-gray-700/50 mx-1" />
+            <button onClick={togglePrivacy} className="p-3 rounded-xl hover:bg-secondary transition-colors">
+                {isPrivacyEnabled ? <EyeOff className="w-6 h-6 text-gray-400"/> : <Eye className="w-6 h-6 text-primary"/>}
+            </button>
+            <MonthSelector selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />
+        </div>
+      </div>
+
+      <motion.div className="glass-card p-4 border border-primary/20 relative overflow-hidden">
+        <div className="flex items-center gap-4 relative z-10">
+          <Sparkles className="w-6 h-6 text-primary" />
+          <div>
+            <p className="text-xs font-bold text-primary uppercase tracking-widest">Análise FinChat IA</p>
+            <p className="text-base text-gray-200">
+               {isPrivacyEnabled ? "Modo de privacidade ativo." : `Seu saldo líquido disponível é de ${formatCurrency(monthlyStats.totalBalance)}.`}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-200 tracking-tight"><Wallet className="w-5 h-5 text-primary"/> Saldos Disponíveis</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activeBanks.map(([bank, balance], index) => (
+                    <div key={bank} className="relative group">
+                        <BankCard bank={bank as BankType} balance={isPrivacyEnabled ? 0 : balance} delay={index * 0.1} />
+                        {isPrivacyEnabled && <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-900/90 backdrop-blur-sm rounded-2xl"><span className="text-lg font-bold text-gray-600">•••••••</span></div>}
+                    </div>
+                ))}
+            </div>
+        </div>
+        <div className="space-y-6">
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-red-400 tracking-tight"><CreditCard className="w-5 h-5"/> Faturas de Cartão</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {processedBills.map(({ bank, remaining, isFullyPaid }, index) => (
+                    <motion.div key={bank} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className={`p-6 rounded-2xl border shadow-lg relative overflow-hidden ${isFullyPaid ? 'bg-green-900/10 border-green-500/20' : 'bg-red-900/10 border-red-500/20'}`}>
+                        {isPrivacyEnabled && <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-900/95 backdrop-blur-sm"><span className="text-lg font-bold text-gray-600">•••••••</span></div>}
+                        <div className="flex justify-between mb-4"><span className="font-semibold text-gray-200 capitalize">{bank}</span><CreditCard className={`w-5 h-5 ${isFullyPaid ? 'text-green-400' : 'text-red-400'}`}/></div>
+                        <div className="flex justify-between items-end">
+                            <div><p className="text-xs text-gray-500 mb-1">A pagar</p><p className="text-2xl font-bold">{isFullyPaid ? 'Liquidada' : formatValue(remaining, isPrivacyEnabled)}</p></div>
+                            {!isFullyPaid && <button onClick={() => initiatePayment(bank, remaining)} className="p-2 bg-red-500/20 hover:bg-green-500/20 text-red-400 hover:text-green-400 rounded-xl transition-all"><CheckCircle2 className="w-6 h-6"/></button>}
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <StatCard title="Saldo do Mês" value={formatValue(monthlyStats.totalBalance, isPrivacyEnabled)} icon={<Wallet className="w-7 h-7" />} delay={0} />
+        <StatCard title="Receitas" value={formatValue(monthlyStats.totalIncome, isPrivacyEnabled)} icon={<ArrowUp className="w-7 h-7" />} variant="success" delay={0.1} />
+        <StatCard title="Despesas Totais" value={formatValue(monthlyStats.totalExpenses, isPrivacyEnabled)} icon={<ArrowDown className="w-7 h-7" />} variant="danger" delay={0.2} />
+      </div>
+
+      <div className="glass-card p-8 border border-white/5 space-y-8">
+        <div className="flex items-center justify-between">
+           <h2 className="text-2xl font-bold flex items-center gap-3 text-white"><Target className="w-6 h-6 text-primary" /> Planejamento de Gastos</h2>
+           <button onClick={() => isEditingBudgets ? saveBudgets() : setIsEditingBudgets(true)} className="px-5 py-2 bg-secondary/50 hover:bg-secondary rounded-xl font-medium transition-all text-sm tracking-wide">
+               {isEditingBudgets ? 'Salvar Limites' : 'Ajustar Metas'}
+           </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isEditingBudgets ? 
+              Object.entries(budgetLimits).map(([cat, limit]) => (
+                <div key={cat} className="p-5 rounded-2xl bg-black/20 border border-white/5">
+                    <label className="text-xs text-gray-500 block mb-2 capitalize">{CATEGORY_LABELS[cat as TransactionCategory]}</label>
+                    <div className="flex items-center gap-2 font-bold text-xl text-white">R$ <input type="number" value={limit} onChange={(e) => handleBudgetChange(cat, e.target.value)} className="bg-transparent border-none outline-none w-full text-white"/></div>
+                </div>
+              )) : 
+              budgetStatus.map((budget, index) => (
+                <BudgetCard 
+                    key={budget.category} 
+                    category={CATEGORY_LABELS[budget.category as TransactionCategory]} 
+                    // ✅ CORREÇÃO: Valores das metas agora respeitam a privacidade
+                    spent={isPrivacyEnabled ? 0 : budget.spent} 
+                    limit={isPrivacyEnabled ? 0 : budget.limit} 
+                    color={COLORS[budget.category as TransactionCategory]} 
+                    delay={0.1 * index} 
+                />
+              ))
+            }
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 glass-card p-8 border border-white/5 h-[450px]">
+          <h2 className="text-xl font-bold mb-8 flex items-center gap-3 text-white"><TrendingUp className="w-6 h-6 text-primary"/> Fluxo de Caixa Diário</h2>
+          <div className="h-full pb-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.2} />
+                <XAxis dataKey="name" stroke="#94a3b8" axisLine={false} tickLine={false} />
+                <YAxis stroke="#94a3b8" axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px' }} formatter={(v: number) => formatValue(v, isPrivacyEnabled)} />
+                <Area type="monotone" dataKey="receitas" stroke="#10b981" fillOpacity={0.1} fill="#10b981" strokeWidth={3}/>
+                <Area type="monotone" dataKey="despesas" stroke="#ef4444" fillOpacity={0.1} fill="#ef4444" strokeWidth={3}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="glass-card p-8 border border-white/5 h-[450px] flex flex-col">
+          <h2 className="text-xl font-bold mb-8 flex items-center gap-3 text-white"><PieIcon className="w-6 h-6 text-primary"/> Consumo por Categoria</h2>
+          {categoryData.length > 0 ? (
+            <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                <div className="h-[200px] w-full relative shrink-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
+                          {categoryData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                        </Pie>
+                        <Tooltip formatter={(v: number) => formatValue(v, isPrivacyEnabled)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Total</span>
+                      <span className="text-xl font-bold text-white leading-tight">{formatValue(monthlyStats.totalExpenses, isPrivacyEnabled)}</span>
+                    </div>
+                </div>
+                <div className="mt-6 flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                    {categoryData.map((item) => (
+                      <div key={item.name} className="flex items-center justify-between p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-sm font-medium text-gray-300 truncate max-w-[100px]">{item.name}</span>
+                        </div>
+                        <span className="text-sm font-bold text-white">{formatValue(item.value, isPrivacyEnabled)}</span>
+                      </div>
+                    ))}
+                </div>
+            </div>
+          ) : <div className="flex-1 flex items-center justify-center opacity-30 text-sm">Sem gastos para exibir.</div>}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {paymentModalOpen && <PaymentModal isOpen={paymentModalOpen} onClose={() => setPaymentModalOpen(false)} onConfirm={confirmPayment} billDetails={billToPay} />}
+        
+        {isAddModalOpen && (
+            <EditTransactionModal 
+                isOpen={isAddModalOpen} 
+                onClose={() => setIsAddModalOpen(false)} 
+                // @ts-ignore
+                transaction={null}
+                onSave={async (_, updates) => {
+                    await addTransaction(updates);
+                    setIsAddModalOpen(false);
+                }} 
+            />
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
