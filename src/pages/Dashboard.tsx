@@ -90,6 +90,7 @@ const PaymentModal = ({ isOpen, onClose, onConfirm, billDetails }: { isOpen: boo
 
 export default function Dashboard() {
   const { transactions, getCategoryTotals, getMonthlyStats, addTransaction, isPrivacyEnabled, togglePrivacy } = useData();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isEditingBudgets, setIsEditingBudgets] = useState(false);
@@ -98,37 +99,75 @@ export default function Dashboard() {
   const [billToPay, setBillToPay] = useState<{ bank: string, amount: number } | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
-
-  // Estados para Comunicado Global
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
 
+  // ✅ Busca Metas e Comunicado do Supabase
   useEffect(() => {
-    const savedLimits = localStorage.getItem('userBudgetLimits');
-    if (savedLimits) setBudgetLimits(JSON.parse(savedLimits));
-    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
-    if (!hasSeenTutorial) setShowTutorial(true);
+    const fetchCloudData = async () => {
+      if (!user) return;
 
-    // ✅ Busca o comunicado da tabela settings no Supabase
-    const fetchAnnouncement = async () => {
-      const { data } = await supabase
+      // Busca orçamentos do banco
+      const { data: budgetData } = await supabase
+        .from('budgets')
+        .select('category, limit_amount')
+        .eq('user_id', user.id);
+
+      if (budgetData && budgetData.length > 0) {
+        const newLimits = { ...DEFAULT_LIMITS };
+        budgetData.forEach(item => {
+          newLimits[item.category] = Number(item.limit_amount);
+        });
+        setBudgetLimits(newLimits);
+      }
+
+      // Busca comunicado
+      const { data: settings } = await supabase
         .from('settings')
         .select('value')
         .eq('key', 'global_announcement')
         .maybeSingle();
       
-      if (data?.value) setAnnouncement(data.value);
+      if (settings?.value) setAnnouncement(settings.value);
     };
-    fetchAnnouncement();
-  }, []);
+
+    fetchCloudData();
+
+    const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
+    if (!hasSeenTutorial) setShowTutorial(true);
+  }, [user]);
 
   const closeTutorial = () => {
       localStorage.setItem('hasSeenTutorial', 'true');
       setShowTutorial(false);
   };
 
-  const saveBudgets = () => { localStorage.setItem('userBudgetLimits', JSON.stringify(budgetLimits)); setIsEditingBudgets(false); };
-  const handleBudgetChange = (category: string, value: string) => { const numValue = parseFloat(value); if (!isNaN(numValue)) setBudgetLimits(prev => ({ ...prev, [category]: numValue })); };
+  // ✅ Salva orçamentos no Supabase para nunca mais resetar
+  const saveBudgets = async () => {
+    if (!user) return;
+    
+    const budgetEntries = Object.entries(budgetLimits).map(([cat, limit]) => ({
+      user_id: user.id,
+      category: cat,
+      limit_amount: limit
+    }));
+
+    const { error } = await supabase
+      .from('budgets')
+      .upsert(budgetEntries, { onConflict: 'user_id, category' });
+
+    if (!error) {
+      toast({ title: "Metas Atualizadas", description: "Seus limites foram salvos na nuvem!" });
+      setIsEditingBudgets(false);
+    } else {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleBudgetChange = (category: string, value: string) => { 
+    const numValue = parseFloat(value); 
+    if (!isNaN(numValue)) setBudgetLimits(prev => ({ ...prev, [category]: numValue })); 
+  };
   
   const monthlyStats = getMonthlyStats(selectedMonth.getMonth(), selectedMonth.getFullYear());
   const monthTransactions = useMemo(() => {
@@ -203,7 +242,6 @@ export default function Dashboard() {
       
       <WelcomeTutorial isOpen={showTutorial} onClose={closeTutorial} />
 
-      {/* ✅ Banner de Comunicado Global */}
       {announcement && showAnnouncement && (
         <motion.div 
           initial={{ height: 0, opacity: 0 }}

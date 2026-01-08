@@ -70,7 +70,7 @@ const smartCategories: Array<{ keys: string[], category: TransactionCategory }> 
       'moveis', 'sofa', 'cama', 'mesa', 'cadeira', 'armario', 'guarda roupa',
       'eletro', 'geladeira', 'fogao', 'microondas', 'maquina de lavar', 'airfryer', 'liquidificador', 'alexa',
       'mercado livre', 'shopee', 'amazon', 'magalu', 'casas bahia', 'leroy merlin', 'tokstok', 'fast shop',
-      'pet', 'racao', 'veterinario', 'banho e tosa', 'gato', 'cachorro', 'areia de gato', 'vacina pet', 'bravecto', 'petz', 'cobasi',
+      'pet', 'racao', 'veterinario', 'banho e tosa', 'gato', 'cachorro', 'api de gato', 'vacina pet', 'bravecto', 'petz', 'cobasi',
       'assinatura', 'streaming', 'tv', 'sky', 'directv', 'disney', 'netflix',
       'jardinagem', 'manutencao', 'dedetizacao', 'chaveiro'
     ] 
@@ -273,6 +273,10 @@ export default function ChatIA() {
   const { user } = useAuth();
   const { addTransaction, totalBalance } = useData();
   const navigate = useNavigate();
+  
+  // ✅ Ajuste para ler as permissões dinâmicas do seu banco
+  const hasAccess = user?.is_admin || user?.plan === 'pro';
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -288,7 +292,8 @@ export default function ChatIA() {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || user?.plan !== 'pro') return;
+    // ✅ Bloqueia o envio baseado no status real da conta
+    if (!input.trim() || !hasAccess) return;
 
     const userMessage: Message = { id: crypto.randomUUID(), role: 'user', content: input, timestamp: new Date() };
     setMessages(prev => [...prev, userMessage]);
@@ -325,11 +330,11 @@ export default function ChatIA() {
         const dateDisplay = parsed.date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
         response = `✅ **${parsed.type === 'income' ? 'Entrada registrada' : 'Lançamento realizado'} com sucesso!**\n\n` +
-                   `Já processei as informações para o período de **${dateDisplay}**:\n\n` +
-                   `💰 **Montante:** ${formatCurrency(parsed.amount)}\n` +
-                   `⚙️ **Método:** ${icon}\n` +
-                   `📝 **Descrição:** ${parsed.description}\n` +
-                   `📂 **Categoria:** ${CATEGORY_LABELS[parsed.category]}`;
+                    `Já processei as informações para o período de **${dateDisplay}**:\n\n` +
+                    `💰 **Montante:** ${formatCurrency(parsed.amount)}\n` +
+                    `⚙️ **Método:** ${icon}\n` +
+                    `📝 **Descrição:** ${parsed.description}\n` +
+                    `📂 **Categoria:** ${CATEGORY_LABELS[parsed.category]}`;
       } else {
         response = '🤔 Compreendi sua intenção, mas preciso de um valor numérico claro para processar o lançamento. Poderia repetir informando o valor?';
       }
@@ -340,7 +345,7 @@ export default function ChatIA() {
   };
 
   return (
-    <div className="h-[calc(100dvh-10rem)] md:h-[calc(100vh-8rem)] flex flex-col px-1">
+    <div className="h-[calc(100dvh-10rem)] md:h-[calc(100vh-8rem)] flex flex-col px-1 text-white">
       <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="mb-4 md:mb-6 flex items-center gap-3">
         <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/20 flex items-center justify-center neon-border">
           <Sparkles className="w-5 h-5 md:w-6 h-6 text-primary" />
@@ -351,13 +356,13 @@ export default function ChatIA() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex-1 glass-card flex flex-col overflow-hidden relative">
+      <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="flex-1 glass-card flex flex-col overflow-hidden relative border border-white/5 rounded-3xl bg-[#0f0f0f]">
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 scroll-smooth">
           <AnimatePresence>
             {messages.map((m) => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'assistant' && <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 border border-primary/20"><Bot className="w-4 h-4 text-primary" /></div>}
-                <div className={`max-w-[90%] md:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-secondary rounded-bl-sm border border-white/5'}`}>
+                <div className={`max-w-[90%] md:max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${m.role === 'user' ? 'bg-primary text-primary-foreground rounded-br-sm' : 'bg-secondary rounded-bl-sm border border-white/5 text-gray-200'}`}>
                   <p className="whitespace-pre-line">{m.content}</p>
                 </div>
               </motion.div>
@@ -366,12 +371,13 @@ export default function ChatIA() {
           <div ref={messagesEndRef} />
         </div>
 
-        {user?.plan !== 'pro' && (
+        {/* ✅ Bloqueio visual se não tiver acesso */}
+        {!hasAccess && (
           <div className="absolute inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-10 p-6">
-             <div className="text-center bg-secondary/50 p-6 rounded-3xl border border-white/10 shadow-2xl">
+             <div className="text-center bg-secondary/50 p-8 rounded-3xl border border-white/10 shadow-2xl max-w-xs">
                 <Lock className="mx-auto mb-4 w-10 h-10 text-primary opacity-50"/>
-                <h3 className="text-lg font-bold mb-4">Acesso PRO Necessário</h3>
-                <Button onClick={() => navigate('/assinatura')} className="w-full py-6 font-bold">Assinar Agora</Button>
+                <h3 className="text-xl font-bold mb-4 text-white">Acesso PRO Necessário</h3>
+                <Button onClick={() => navigate('/assinatura')} className="w-full py-6 font-bold text-lg">Assinar Agora</Button>
              </div>
           </div>
         )}
@@ -383,11 +389,11 @@ export default function ChatIA() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder="Gastei 50 no uber..."
-            disabled={user?.plan !== 'pro'}
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm focus:border-primary outline-none transition-all placeholder:text-gray-600"
+            disabled={!hasAccess}
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-sm focus:border-primary outline-none transition-all placeholder:text-gray-600 text-white"
           />
-          <Button onClick={handleSend} disabled={!input.trim()} className="bg-primary hover:bg-primary/90 rounded-xl px-4 h-[48px] shadow-lg shadow-primary/20">
-            <Send className="w-5 h-5" />
+          <Button onClick={handleSend} disabled={!input.trim() || !hasAccess} className="bg-primary hover:bg-primary/90 rounded-xl px-4 h-[48px] shadow-lg shadow-primary/20">
+            <Send className="w-5 h-5 text-white" />
           </Button>
         </div>
       </motion.div>

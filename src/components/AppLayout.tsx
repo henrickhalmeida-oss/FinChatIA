@@ -88,7 +88,7 @@ export function AppLayout() {
                   );
                 })}
 
-                {/* 🛡️ BOTÃO ADMIN EXCLUSIVO - Agora usa o is_admin do banco */}
+                {/* 🛡️ BOTÃO ADMIN EXCLUSIVO */}
                 {user?.is_admin && (
                   <div className="pt-4 mt-4 border-t border-white/5">
                     <Link
@@ -117,11 +117,11 @@ export function AppLayout() {
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate text-white">{user?.name || 'Usuário'}</p>
                   
-                  {/* ✅ STATUS DINÂMICO DO PLANO */}
+                  {/* ✅ STATUS DINÂMICO CORRIGIDO */}
                   <p className="text-[10px] text-primary font-bold uppercase tracking-tighter">
                     {user?.is_admin 
                       ? 'Administrador' 
-                      : (user?.plan_type === 'pro' ? 'Membro PRO' : 'Membro FREE')}
+                      : (user?.plan === 'pro' ? 'Membro PRO' : 'Membro FREE')}
                   </p>
                 </div>
               </div>
