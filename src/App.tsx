@@ -4,8 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { DataProvider } from "@/contexts/DataContext";
-import { AppLayout } from "@/components/AppLayout"; // ✅ Certifique-se que o caminho está correto
+// ✅ Corrigido: O componente DataProvider está dentro do arquivo DataContext
+import { DataProvider } from "@/contexts/DataContext"; 
+import { AppLayout } from "@/components/AppLayout"; 
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -14,6 +15,8 @@ import Carteira from "./pages/Carteira";
 import Metas from "./pages/Metas";
 import Integracoes from "./pages/Integracoes";
 import Assinatura from "./pages/Assinatura";
+// ✅ Corrigido: Importação com 'A' maiúsculo para coincidir com o arquivo Admin.tsx
+import Admin from "./pages/Admin"; 
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +40,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      
+      {/* Rotas Protegidas com Layout */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/chat" element={<ChatIA />} />
@@ -44,7 +49,9 @@ function AppRoutes() {
         <Route path="/metas" element={<Metas />} />
         <Route path="/integracoes" element={<Integracoes />} />
         <Route path="/assinatura" element={<Assinatura />} />
+        <Route path="/admin" element={<Admin />} /> 
       </Route>
+      
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

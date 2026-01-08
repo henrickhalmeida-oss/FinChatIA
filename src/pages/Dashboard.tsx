@@ -5,7 +5,7 @@ import {
   Target, Sparkles, CreditCard, Clock, 
   Wallet, ArrowUp, ArrowDown, PieChart as PieIcon,
   Pencil, Save, CheckCircle2, Check, Eye, EyeOff, AlertTriangle, X,
-  Info, MessageSquare, Zap
+  Info, MessageSquare, Zap, Megaphone
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { EditTransactionModal } from '@/components/EditTransactionModal';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 const COLORS: Record<TransactionCategory, string> = {
   alimentacao: '#ef4444', transporte: '#8b5cf6', casa: '#3b82f6',
@@ -98,11 +99,27 @@ export default function Dashboard() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // Estados para Comunicado Global
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+
   useEffect(() => {
     const savedLimits = localStorage.getItem('userBudgetLimits');
     if (savedLimits) setBudgetLimits(JSON.parse(savedLimits));
     const hasSeenTutorial = localStorage.getItem('hasSeenTutorial');
     if (!hasSeenTutorial) setShowTutorial(true);
+
+    // ✅ Busca o comunicado da tabela settings no Supabase
+    const fetchAnnouncement = async () => {
+      const { data } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'global_announcement')
+        .maybeSingle();
+      
+      if (data?.value) setAnnouncement(data.value);
+    };
+    fetchAnnouncement();
   }, []);
 
   const closeTutorial = () => {
@@ -185,6 +202,28 @@ export default function Dashboard() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 md:space-y-10 pb-24 md:pb-10 max-w-7xl mx-auto px-1 md:px-0">
       
       <WelcomeTutorial isOpen={showTutorial} onClose={closeTutorial} />
+
+      {/* ✅ Banner de Comunicado Global */}
+      {announcement && showAnnouncement && (
+        <motion.div 
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          className="mx-2 md:mx-0 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+              <Megaphone className="w-5 h-5 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-[10px] text-amber-500/60 uppercase font-black tracking-widest mb-0.5">Aviso Master AI</p>
+              <p className="text-sm font-bold text-amber-100">{announcement}</p>
+            </div>
+          </div>
+          <button onClick={() => setShowAnnouncement(false)} className="text-amber-500/50 hover:text-amber-500 p-1">
+            <X className="w-5 h-5" />
+          </button>
+        </motion.div>
+      )}
 
       {/* HEADER MOBILE OPTIMIZED */}
       <div className="flex flex-col gap-6">

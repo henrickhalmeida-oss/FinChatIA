@@ -2,10 +2,11 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
-// Adicionamos 'name' aqui para o frontend não quebrar
+// ✅ Adicionada a propriedade is_admin para sincronizar com o banco
 interface User extends SupabaseUser {
   plan?: 'free' | 'pro';
   name?: string; 
+  is_admin?: boolean; 
 }
 
 interface AuthContextType {
@@ -31,30 +32,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // ✅ O select('*') agora busca a sua nova coluna is_admin
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentSession.user.id)
         .single();
 
-      // Prioridade: Nome no Perfil > Nome no Metadata do Google/Email > 'Usuário'
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erro ao buscar perfil:', error);
+      }
+
       const fullName = profile?.full_name || currentSession.user.user_metadata?.full_name || 'Usuário';
       const planType = profile?.plan_type || 'free';
+      const isAdminStatus = profile?.is_admin || false; // ✅ Captura o status do banco
 
       const userData: User = {
         ...currentSession.user,
         plan: planType as 'free' | 'pro',
-        name: fullName, // AQUI ESTÁ A CORREÇÃO DO NOME
+        name: fullName,
+        is_admin: isAdminStatus, // ✅ Disponibiliza o status para o app
       };
       
       setUser(userData);
     } catch (error) {
-      console.error('Erro ao buscar perfil:', error);
-      // Fallback para não travar
+      console.error('Erro de sistema:', error);
       setUser({
         ...currentSession.user,
         plan: 'free',
-        name: currentSession.user.user_metadata?.full_name || 'Usuário'
+        name: currentSession.user.user_metadata?.full_name || 'Usuário',
+        is_admin: false
       });
     }
   };
@@ -86,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password,
       options: {
-        data: { full_name: name }, // Isso salva no user_metadata
+        data: { full_name: name },
       },
     });
     if (error) throw error;

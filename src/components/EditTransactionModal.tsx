@@ -42,15 +42,20 @@ export function EditTransactionModal({ isOpen, onClose, transaction, onSave }: E
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Se for entrada (income), o método de pagamento deve ser sempre débito/saldo
+    const finalPaymentMethod = type === 'income' ? 'debit' : paymentMethod;
+
     const updates: Partial<Transaction> = {
       description,
       amount: parseFloat(amount),
       category,
-      bank, // ✅ Garante que o banco selecionado seja enviado
+      bank, // Valor capturado do select local
       type,
-      paymentMethod,
+      paymentMethod: finalPaymentMethod,
       date: new Date(date + 'T12:00:00')
     };
+
     await onSave(transaction?.id || '', updates);
     onClose();
   };

@@ -2,15 +2,14 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, MessageSquare, Wallet, 
-  Target, Zap, CreditCard, Menu, X, TrendingUp, LogOut
+  Target, Zap, CreditCard, Menu, X, TrendingUp, LogOut, ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 
-// ✅ Alterado para Exportação Nomeada para resolver o erro no App.tsx
 export function AppLayout() {
   const { pathname } = useLocation();
-  const { user, logout } = useAuth(); // ✅ Sincronizado com seu Context
+  const { user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
@@ -43,7 +42,7 @@ export function AppLayout() {
         </button>
       </div>
 
-      {/* 🖥️ SIDEBAR (Flutuante no Mobile) */}
+      {/* 🖥️ SIDEBAR */}
       <AnimatePresence>
         {(isMobileMenuOpen || window.innerWidth > 768) && (
           <motion.aside
@@ -88,6 +87,25 @@ export function AppLayout() {
                     </Link>
                   );
                 })}
+
+                {/* 🛡️ BOTÃO ADMIN EXCLUSIVO - Agora usa o is_admin do banco */}
+                {user?.is_admin && (
+                  <div className="pt-4 mt-4 border-t border-white/5">
+                    <Link
+                      to="/admin"
+                      onClick={closeMenu}
+                      className={`
+                        flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all font-bold text-sm
+                        ${pathname === '/admin' 
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' 
+                          : 'text-amber-500/60 hover:text-amber-400 hover:bg-amber-500/10'}
+                      `}
+                    >
+                      <ShieldCheck className="w-5 h-5" />
+                      Painel Admin
+                    </Link>
+                  </div>
+                )}
               </nav>
             </div>
 
@@ -98,7 +116,9 @@ export function AppLayout() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate text-white">{user?.name || 'Usuário'}</p>
-                  <p className="text-[10px] text-primary font-bold uppercase tracking-tighter">Membro PRO</p>
+                  <p className="text-[10px] text-primary font-bold uppercase tracking-tighter">
+                    {user?.is_admin ? 'Administrador' : 'Membro PRO'}
+                  </p>
                 </div>
               </div>
               <button 

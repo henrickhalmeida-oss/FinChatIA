@@ -83,7 +83,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [isPrivacyEnabled, setIsPrivacyEnabled] = useState(false);
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([]);
 
-  // Carregar Metas do LocalStorage
   useEffect(() => {
     const savedGoals = localStorage.getItem('userSavingsGoals');
     if (savedGoals) setSavingsGoals(JSON.parse(savedGoals));
@@ -110,7 +109,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const togglePrivacy = () => setIsPrivacyEnabled(prev => !prev);
 
-  // Busca transações do Supabase
   const fetchTransactions = useCallback(async () => {
     if (!user) return;
     const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false });
@@ -132,7 +130,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { if (user) fetchTransactions(); }, [user, fetchTransactions]);
 
-  // Adicionar Transação
   const addTransaction = useCallback(async (transactionData: any) => {
     if (!user) return;
     const finalMethod = transactionData.paymentMethod === 'credit' ? 'credit' : 'debit';
@@ -154,22 +151,27 @@ export function DataProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchTransactions, toast]);
 
-  // ✅ Atualizar Transação (Corrigido para mapear 'bank')
+  // ✅ FUNÇÃO DE ATUALIZAÇÃO CORRIGIDA (MAPEAMENTO SNAKE_CASE)
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
     if (!user) return;
     
-    const dbUpdates: any = { ...updates };
-    if (updates.date) dbUpdates.date = new Date(updates.date).toISOString();
-    if (updates.paymentMethod) dbUpdates.payment_method = updates.paymentMethod;
-    // O campo 'bank' já está em 'updates', o Supabase aceita se a coluna for 'bank'
+    const dbUpdates: any = {};
+    if (updates.description !== undefined) dbUpdates.description = updates.description;
+    if (updates.amount !== undefined) dbUpdates.amount = updates.amount;
+    if (updates.type !== undefined) dbUpdates.type = updates.type;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.bank !== undefined) dbUpdates.bank = updates.bank; // Troca o banco corretamente
+    if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod; // Mapeia payment_method
+    if (updates.date !== undefined) dbUpdates.date = new Date(updates.date).toISOString();
     
     const { error } = await supabase.from('transactions').update(dbUpdates).eq('id', id);
     
     if (!error) {
-      // Atualiza o estado local para resposta imediata
       setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
       toast({ title: "Sucesso", description: "Registro atualizado!" });
-      fetchTransactions(); // Sincroniza
+      fetchTransactions();
+    } else {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   }, [user, fetchTransactions, toast]);
 
@@ -188,7 +190,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
   }, [user]);
 
-  // Cálculos Globais (Dashboard Principal)
   const { totalIncome, totalExpenses, totalBalance, bankBalances, creditCardBills } = useMemo(() => {
     const balances: Record<BankType, number> = { nubank: 0, itau: 0, caixa: 0, outros: 0 };
     const bills: Record<BankType, number> = { nubank: 0, itau: 0, caixa: 0, outros: 0 };
