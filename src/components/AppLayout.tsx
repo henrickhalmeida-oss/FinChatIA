@@ -116,8 +116,12 @@ export function AppLayout() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold truncate text-white">{user?.name || 'Usuário'}</p>
+                  
+                  {/* ✅ STATUS DINÂMICO DO PLANO */}
                   <p className="text-[10px] text-primary font-bold uppercase tracking-tighter">
-                    {user?.is_admin ? 'Administrador' : 'Membro PRO'}
+                    {user?.is_admin 
+                      ? 'Administrador' 
+                      : (user?.plan_type === 'pro' ? 'Membro PRO' : 'Membro FREE')}
                   </p>
                 </div>
               </div>

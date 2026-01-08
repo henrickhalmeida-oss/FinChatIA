@@ -2,9 +2,10 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/lib/supabase';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
-// ✅ Adicionada a propriedade is_admin para sincronizar com o banco
+// ✅ Adicionadas as propriedades corretas para sincronizar com o banco e o layout
 interface User extends SupabaseUser {
   plan?: 'free' | 'pro';
+  plan_type?: 'free' | 'pro'; // ✅ Adicionado para resolver o erro no AppLayout
   name?: string; 
   is_admin?: boolean; 
 }
@@ -32,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // ✅ O select('*') agora busca a sua nova coluna is_admin
+      // ✅ Busca todas as colunas do perfil (plan_type, is_admin, full_name)
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -44,14 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const fullName = profile?.full_name || currentSession.user.user_metadata?.full_name || 'Usuário';
-      const planType = profile?.plan_type || 'free';
-      const isAdminStatus = profile?.is_admin || false; // ✅ Captura o status do banco
+      const planType = (profile?.plan_type || 'free') as 'free' | 'pro';
+      const isAdminStatus = profile?.is_admin || false;
 
       const userData: User = {
         ...currentSession.user,
-        plan: planType as 'free' | 'pro',
+        plan: planType,
+        plan_type: planType, // ✅ Agora o TypeScript reconhece esta propriedade no AppLayout
         name: fullName,
-        is_admin: isAdminStatus, // ✅ Disponibiliza o status para o app
+        is_admin: isAdminStatus,
       };
       
       setUser(userData);
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         ...currentSession.user,
         plan: 'free',
+        plan_type: 'free',
         name: currentSession.user.user_metadata?.full_name || 'Usuário',
         is_admin: false
       });
@@ -112,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', user.id);
 
     if (!error) {
-      setUser({ ...user, plan });
+      setUser({ ...user, plan, plan_type: plan });
     }
   };
 
